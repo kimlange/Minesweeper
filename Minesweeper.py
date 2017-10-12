@@ -28,12 +28,18 @@ def main():
 
     # menu()
     # pygame.time.wait(2000)
-    WIDTH = 9
-    HEIGHT = 9
-    MINES = 10
+    WIDTH = 30
+    HEIGHT = 16
+    MINES = 99
 
     board = get_randomized_board()
     revealed_boxes = generate_revealed_boxes_data(False)
+
+    # storing number of mines
+    for i in range(WIDTH):
+        for j in range(HEIGHT):
+            if (board[i][j] != 'X'):
+                board[i][j] = calculate_mines(board, i, j)
 
     # main game loop
     while True:
@@ -55,18 +61,21 @@ def main():
         x, y = get_box_at_pixel(mouse_x, mouse_y)
         if(x != None and y != None and not revealed_boxes[x][y] and mouse_clicked):
             revealed_boxes[x][y] = True
-            if(board[x][y] == 1):
+            if(board[x][y] == 'X'):
                 game_over()
-            else:
+            elif(board[x][y] == 0):
                 n = find_neighbours(x, y)
-                if(calculate_mines(board, n) == 0):
-                    reveal_boxes(revealed_boxes, n)
-                    while(len(n) != 0):
+                reveal_boxes(revealed_boxes, n)
+                while(len(n) != 0):
+                    if(board[n[0][0]][n[0][1]] == 0):
                         n2 = find_neighbours(n[0][0], n[0][1])
-                        if(calculate_mines(board, n2) == 0):
-                            reveal_boxes(revealed_boxes, n2)
-                            # TODO: reveal all 0-mines-boxes
-                        n.remove(n[0])
+                        for i in range(len(n2)):
+                            if(revealed_boxes[n2[i][0]][n2[i][1]] == False):
+                                n.append(n2[i])
+                        reveal_boxes(revealed_boxes, n2)
+
+
+                    n.remove(n[0])
         # redraw the screen and wait a clock tick
         pygame.display.update()
         FPS_CLOCK.tick(FPS)
@@ -95,7 +104,7 @@ def get_randomized_board():
     board = []
     for x in range(WIDTH * HEIGHT):
         if m > 0:
-            b.append(1)
+            b.append('X')
             m = m - 1
         else:
             b.append(0)
@@ -116,13 +125,14 @@ def generate_revealed_boxes_data(val):
     return revealed_boxes
 
 
-# returns number of mines in list n
-def calculate_mines(board, n):
+# returns number of mines surrounding field (x,y)
+def calculate_mines(board, x, y):
+    n = find_neighbours(x, y)
     count = 0
     for i in n:
         x1 = i[0]
         y1 = i[1]
-        if(board[x1][y1] == 1):
+        if(board[x1][y1] == 'X'):
             count = count + 1
     return count
 
@@ -151,11 +161,10 @@ def draw_board(board, revealed):
             if not revealed[x][y]:
                 pygame.draw.rect(DISPLAY_SURF, PINK, (left, top, BOX_SIZE, BOX_SIZE))
             else:
-                if(board[x][y] == 0):
+                if(board[x][y] != 'X'):
                     pygame.draw.rect(DISPLAY_SURF, WHITE, (left, top, BOX_SIZE, BOX_SIZE))
-                    n = calculate_mines(board, find_neighbours(x, y))
                     font_obj = pygame.font.Font('freesansbold.ttf', 12)
-                    text_surface_obj = font_obj.render(str(n), True, BLACK)
+                    text_surface_obj = font_obj.render(str(board[x][y]), True, BLACK)
                     text_rect_obj = text_surface_obj.get_rect()
                     text_rect_obj.center = (left + BOX_SIZE/2, top + BOX_SIZE/2)
                     DISPLAY_SURF.blit(text_surface_obj, text_rect_obj)
